@@ -50,6 +50,8 @@ fun Principal(modifier: Modifier = Modifier) {
     ) {
         Text(text = "Adivina el número", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
+        Text(text = "José Hernández")
+        Spacer(modifier = Modifier.height(16.dp))
         Text(text = "Tienes $intentos intento(s) restante(s)")
         Spacer(modifier = Modifier.height(16.dp))
 
