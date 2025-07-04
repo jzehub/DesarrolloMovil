@@ -122,7 +122,7 @@ fun SendWhatsAppMessageWithLocation(
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "José Hernández")
+        Text(text = "Jose Hernandez")
 
         Spacer(modifier = Modifier.height(16.dp))
 
