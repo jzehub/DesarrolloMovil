@@ -26,30 +26,7 @@ data class Celda(val numero: Int, var marcada: Boolean = false)
 @Composable
 fun Activity2(size: Int, uid: String) {
     val context = LocalContext.current
-    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
-
-
-
-    DisposableEffect(Unit) {
-        onDispose {
-            tts?.shutdown()
-        }
-    }
-
     var matriz by remember { mutableStateOf(generarMatriz(size)) }
-    val numerosSorteados = remember { mutableStateListOf<Int>() }
-    var numeroActual by remember { mutableStateOf<Int?>(null) }
-
-    // Animación para el número actual
-    val infiniteTransition = rememberInfiniteTransition()
-    val animatedAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        )
-    )
 
     Column(
         modifier = Modifier
@@ -60,12 +37,10 @@ fun Activity2(size: Int, uid: String) {
     ) {
         Text("🎯 UID: $uid", color = Color.Yellow, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
-        Text("🎲 Ronda: ${numerosSorteados.size + 1}", color = Color.White, fontSize = 18.sp)
         Text(
-            "🎯 Número actual: ${numeroActual ?: "-"}",
-            color = Color.Cyan.copy(alpha = animatedAlpha),
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
+            "Selecciona celdas para marcar",
+            color = Color.White,
+            fontSize = 18.sp
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -89,19 +64,12 @@ fun Activity2(size: Int, uid: String) {
                                 ),
                                 shape = CircleShape
                             )
-                            .clickable(
-                                enabled = !celda.marcada && numeroActual != null && celda.numero == numeroActual
-                            ) {
-                                if (celda.numero == numeroActual) {
-                                    celda.marcada = true
-                                    matriz = matriz.map { it.copyOf() }.toTypedArray()
+                            .clickable(enabled = !celda.marcada) {
+                                celda.marcada = true
+                                matriz = matriz.map { it.copyOf() }.toTypedArray()
 
-                                    if (hayBingo(matriz)) {
-                                        Toast
-                                            .makeText(context, "¡Bingo!", Toast.LENGTH_LONG)
-                                            .show()
-                                        tts?.speak("¡Bingo!", TextToSpeech.QUEUE_FLUSH, null, null)
-                                    }
+                                if (hayConsecutivosMarcados(matriz)) {
+                                    Toast.makeText(context, "¡Bingo!", Toast.LENGTH_LONG).show()
                                 }
                             },
                         contentAlignment = Alignment.Center
@@ -121,30 +89,7 @@ fun Activity2(size: Int, uid: String) {
 
         Button(
             onClick = {
-                val total = size * size * 2
-                val restantes = (1..total).filter { it !in numerosSorteados }
-
-                if (restantes.isNotEmpty()) {
-                    val nuevo = restantes.random()
-                    numeroActual = nuevo
-                    numerosSorteados.add(nuevo)
-                    tts?.speak("Número $nuevo", TextToSpeech.QUEUE_FLUSH, null, null)
-                } else {
-                    Toast.makeText(context, "Ya no hay más números", Toast.LENGTH_SHORT).show()
-                }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDA0037))
-        ) {
-            Text("🎱 Sacar número", color = Color.White)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
                 matriz = generarMatriz(size)
-                numerosSorteados.clear()
-                numeroActual = null
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A0572))
         ) {
@@ -153,6 +98,8 @@ fun Activity2(size: Int, uid: String) {
     }
 }
 
+
+// 🎯 Función para generar la carta
 fun generarMatriz(size: Int): Array<Array<Celda>> {
     val total = size * size
     val numeros = (1..(total * 2)).shuffled().take(total)
@@ -166,15 +113,43 @@ fun generarMatriz(size: Int): Array<Array<Celda>> {
     return matriz
 }
 
-fun hayBingo(matriz: Array<Array<Celda>>): Boolean {
+// ✅ Detectar 5 marcas consecutivas en cualquier dirección
+fun hayConsecutivosMarcados(matriz: Array<Array<Celda>>): Boolean {
     val n = matriz.size
+    val target = n  // Ahora se requiere n consecutivos
+
+    // Filas
     for (i in 0 until n) {
-        if (matriz[i].all { it.marcada }) return true
+        var count = 0
+        for (j in 0 until n) {
+            count = if (matriz[i][j].marcada) count + 1 else 0
+            if (count == target) return true
+        }
     }
+
+    // Columnas
     for (j in 0 until n) {
-        if ((0 until n).all { i -> matriz[i][j].marcada }) return true
+        var count = 0
+        for (i in 0 until n) {
+            count = if (matriz[i][j].marcada) count + 1 else 0
+            if (count == target) return true
+        }
     }
-    if ((0 until n).all { i -> matriz[i][i].marcada }) return true
-    if ((0 until n).all { i -> matriz[i][n - 1 - i].marcada }) return true
+
+    // Diagonal principal (↘)
+    var countDiag1 = 0
+    for (i in 0 until n) {
+        countDiag1 = if (matriz[i][i].marcada) countDiag1 + 1 else 0
+        if (countDiag1 == target) return true
+    }
+
+    // Diagonal secundaria (↙)
+    var countDiag2 = 0
+    for (i in 0 until n) {
+        countDiag2 = if (matriz[i][n - 1 - i].marcada) countDiag2 + 1 else 0
+        if (countDiag2 == target) return true
+    }
+
     return false
 }
+
